@@ -5,11 +5,32 @@ This guide covers the network configuration required when running 8311-ha-bridge
 ## Network Topology
 
 ```
-[Docker Host] --> [UCG-Fiber Gateway] --> [WAS-110 ONU]
-   (your LAN)         eth6 (SFP+)         192.168.11.1
+[Docker Host] --> [UniFi Gateway] --> [WAS-110 ONU]
+   (your LAN)        (SFP+ port)       192.168.11.1
 ```
 
-The WAS-110 uses a separate management subnet (192.168.11.0/24) on the SFP+ port (eth6). Your gateway needs an IP on this subnet to route traffic.
+The WAS-110 uses a separate management subnet (192.168.11.0/24) on the SFP+ port. Your gateway needs an IP on this subnet to route traffic.
+
+## Identify Your SFP+ Interface
+
+**Important:** The interface name varies by gateway model and port location. You must identify which interface your WAS-110 SFP+ is connected to.
+
+**Find your interface:**
+```bash
+# List all interfaces
+ip link show
+
+# Look for SFP+ ports - common names:
+# - eth6, eth7, eth8, eth9 (UCG-Fiber, UDM-Pro)
+# - eth4, eth5 (UDM-SE)
+# - sfp0, sfp1 (some models)
+
+# Check which interface has link to WAS-110
+# (the WAS-110 typically shows as 10Gbps or 2.5Gbps link)
+ethtool eth6 | grep "Link detected"
+```
+
+**Throughout this guide, replace `eth6` with your actual interface name.**
 
 ## UCG-Fiber: IP Alias Configuration (CRITICAL)
 
@@ -23,19 +44,22 @@ The WAS-110 at `192.168.11.1` is only reachable via the eth6 interface. The gate
 
 Use a cron job that checks and restores the alias every 5 minutes.
 
-**Execute on UCG-Fiber gateway (SSH as root):**
+**Execute on UniFi gateway (SSH as root):**
 
 ```bash
+# Set your interface name (identified in previous step)
+IFACE="eth6"  # <-- CHANGE THIS to your SFP+ interface
+
 # Create the check script
 mkdir -p /data/scripts
 
-cat > /data/scripts/check-was110-alias.sh << 'EOF'
+cat > /data/scripts/check-was110-alias.sh << EOF
 #!/bin/sh
-# Check if eth6 has the WAS-110 management alias
+# Check if $IFACE has the WAS-110 management alias
 # If missing, restore it and log the event
-if ! ip addr show eth6 | grep -q "192.168.11.2"; then
-    ip addr add 192.168.11.2/24 dev eth6 2>/dev/null
-    logger -t was110-alias "Restored 192.168.11.2/24 alias to eth6"
+if ! ip addr show $IFACE | grep -q "192.168.11.2"; then
+    ip addr add 192.168.11.2/24 dev $IFACE 2>/dev/null
+    logger -t was110-alias "Restored 192.168.11.2/24 alias to $IFACE"
 fi
 EOF
 
@@ -52,6 +76,7 @@ crontab -l
 ### Immediate Fix (If Alias Missing Now)
 
 ```bash
+# Replace eth6 with your interface
 ip addr add 192.168.11.2/24 dev eth6
 ```
 
@@ -61,7 +86,7 @@ ip addr add 192.168.11.2/24 dev eth6
 # From gateway
 ping -c 3 192.168.11.1
 
-# Check alias is present
+# Check alias is present (replace eth6 with your interface)
 ip addr show eth6 | grep "192.168.11"
 ```
 
@@ -120,7 +145,7 @@ volumes:
 
 ### Container can't reach WAS-110
 
-1. Check gateway alias: `ip addr show eth6 | grep 192.168.11`
+1. Check gateway alias: `ip addr show <your-interface> | grep 192.168.11`
 2. If missing, run the immediate fix or wait for cron
 3. Check Docker host routing: `ip route get 192.168.11.1`
 
