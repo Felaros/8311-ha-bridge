@@ -1,0 +1,180 @@
+# Home Assistant Lovelace Dashboard for 8311-ha-bridge
+#
+# v7: Final design based on all user feedback.
+# - Reverts to the 'tile' card with 'card-mod' for main KPIs, as seen in the user's "Pool" example. This is a known-good configuration.
+# - The "Details & Diagnostics" section is a 2-column grid to prevent text cutoff.
+# - Bridge Uptime is formatted using a Mushroom card.
+#
+# MAKE SURE YOU HAVE THE FOLLOWING HACS INTEGRATIONS INSTALLED:
+# - card-mod: For changing the tile colors.
+# - Mushroom: For the uptime card and entity cards.
+# - history-explorer-card: For the detailed history graph.
+#
+title: 8311 ONU Monitoring
+path: 8311-onu
+icon: mdi:wan
+layout:
+  grid-template-columns: 60% 40%
+  grid-template-rows: auto
+cards:
+  - type: vertical-stack
+    view_layout:
+      grid-column: 1
+    cards:
+      - type: grid
+        title: Core Optical & System Health
+        columns: 3
+        square: false
+        cards:
+          - type: tile
+            entity: sensor.8311_onu_was110_xgspon_rx_power
+            name: RX Power
+            icon: mdi:arrow-down-bold-hexagon-outline
+            color: green
+            card_mod:
+              style: |
+                ha-card {
+                  {% set val = states(config.entity) | float(-100) %}
+                  {% if val < -28 %} --tile-color: #db4437;
+                  {% elif val < -27 %} --tile-color: #ffa600;
+                  {% endif %}
+                }
+          - type: tile
+            entity: sensor.8311_onu_was110_xgspon_tx_power
+            name: TX Power
+            icon: mdi:arrow-up-bold-hexagon-outline
+            color: green
+            card_mod:
+              style: |
+                ha-card {
+                  {% set val = states(config.entity) | float(0) %}
+                  {% if val < 2 or val > 9 %} --tile-color: #db4437;
+                  {% elif val < 4 or val > 7 %} --tile-color: #ffa600;
+                  {% endif %}
+                }
+          - type: tile
+            entity: sensor.8311_onu_was110_xgspon_optic_temperature
+            name: Optic Temp
+            icon: mdi:thermometer
+            color: green
+            card_mod:
+              style: |
+                ha-card {
+                  {% set val = states(config.entity) | float(0) %}
+                  {% if val > 70 %} --tile-color: #db4437;
+                  {% elif val > 60 %} --tile-color: #ffa600;
+                  {% endif %}
+                }
+          - type: tile
+            entity: sensor.8311_onu_was110_xgspon_voltage
+            name: Voltage
+            icon: mdi:flash
+            color: green
+            card_mod:
+              style: |
+                ha-card {
+                  {% set val = states(config.entity) | float(0) %}
+                  {% if val < 3.1 or val > 3.5 %} --tile-color: #db4437;
+                  {% elif val < 3.2 or val > 3.4 %} --tile-color: #ffa600;
+                  {% endif %}
+                }
+          - type: tile
+            entity: sensor.8311_onu_was110_xgspon_tx_bias_current
+            name: TX Bias
+            icon: mdi:current-ac
+            color: green
+            card_mod:
+              style: |
+                ha-card {
+                  {% set val = states(config.entity) | float(0) %}
+                  {% if val < 2 or val > 20 %} --tile-color: #db4437;
+                  {% elif val < 4 or val > 15 %} --tile-color: #ffa600;
+                  {% endif %}
+                }
+          - type: tile
+            entity: sensor.8311_onu_was110_xgspon_cpu0_temperature
+            name: CPU Temp
+            icon: mdi:chip
+            color: green
+            card_mod:
+              style: |
+                ha-card {
+                  {% set val = states(config.entity) | float(0) %}
+                  {% if val > 85 %} --tile-color: #db4437;
+                  {% elif val > 70 %} --tile-color: #ffa600;
+                  {% endif %}
+                }
+      - type: grid
+        title: Details & Diagnostics
+        columns: 2
+        square: false
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.8311_onu_was110_xgspon_pon_link
+            name: PON Link
+            icon: mdi:wan
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.8311_onu_was110_xgspon_ssh_connection
+            name: SSH Link
+          - type: custom:mushroom-entity-card
+            entity: sensor.8311_onu_was110_xgspon_ethernet_speed
+            name: Eth Speed
+          - type: custom:mushroom-entity-card
+            entity: sensor.8311_onu_was110_xgspon_cpu1_temperature
+            name: CPU1 Temp
+          - type: custom:mushroom-entity-card
+            entity: sensor.8311_onu_was110_xgspon_vendor
+            name: Vendor
+          - type: custom:mushroom-entity-card
+            entity: sensor.8311_onu_was110_xgspon_part_number
+            name: Part Num
+          - type: custom:mushroom-entity-card
+            entity: sensor.8311_onu_was110_xgspon_pon_mode
+            name: PON Mode
+          - type: custom:mushroom-template-card
+            primary: Bridge Uptime
+            secondary: >
+              {% set uptime = states('sensor.8311_onu_was110_xgspon_bridge_uptime') | int(0) %}
+              {% set days = (uptime / 86400) | int %}
+              {% set hours = ((uptime % 86400) / 3600) | int %}
+              {% set minutes = ((uptime % 3600) / 60) | int %}
+              {%- if days > 0 -%}
+                {{ days }}d {{ hours }}h
+              {%- else -%}
+                {{ hours }}h {{ minutes }}m
+              {%- endif -%}
+            entity: sensor.8311_onu_was110_xgspon_bridge_uptime
+            icon: mdi:timer-outline
+  - type: custom:history-explorer-card
+    view_layout:
+      grid-column: 2
+    header: ONU Performance History
+    defaultTimeRange: 24h
+    refresh:
+      interval: 60
+    lineMode: stepped
+    graphs:
+      - type: line
+        options: { height: 150 }
+        entities:
+          - entity: sensor.8311_onu_was110_xgspon_rx_power
+            name: RX Power (dBm)
+          - entity: sensor.8311_onu_was110_xgspon_tx_power
+            name: TX Power (dBm)
+      - type: line
+        options: { height: 150 }
+        entities:
+          - entity: sensor.8311_onu_was110_xgspon_optic_temperature
+            name: Optic Temp (°C)
+          - entity: sensor.8311_onu_was110_xgspon_cpu0_temperature
+            name: CPU0 Temp (°C)
+      - type: line
+        options: { height: 120 }
+        entities:
+          - entity: sensor.8311_onu_was110_xgspon_voltage
+            name: Voltage (V)
+      - type: line
+        options: { height: 120 }
+        entities:
+          - entity: sensor.8311_onu_was110_xgspon_tx_bias_current
+            name: TX Bias (mA)
