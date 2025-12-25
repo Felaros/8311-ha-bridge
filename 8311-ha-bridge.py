@@ -61,8 +61,8 @@ WAS_110_PORT = _env_int("WAS_110_PORT", 22)                      # SSH port
 # --- Home Assistant MQTT Broker Configuration ---
 HA_MQTT_BROKER = _env_str("HA_MQTT_BROKER", "homeassistant.local")      # MQTT broker IP/hostname
 HA_MQTT_PORT = _env_int("HA_MQTT_PORT", 1883)                   # MQTT port
-HA_MQTT_USER = _env_str("HA_MQTT_USER", "8311-ha-bridge")        # MQTT username (or None)
-HA_MQTT_PASS = _env_str("HA_MQTT_PASS", None)                    # MQTT password (or None)
+HA_MQTT_USER = _env_str("HA_MQTT_USER", None)                   # MQTT username (or None)
+HA_MQTT_PASS = _env_str("HA_MQTT_PASS", None)                   # MQTT password (or None)
 
 # --- Script Operation Settings ---
 POLL_INTERVAL_SECONDS = _env_int("POLL_INTERVAL_SECONDS", 60)    # How often to query WAS-110
