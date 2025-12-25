@@ -70,10 +70,10 @@ SSH_TIMEOUT_SECONDS = _env_int("SSH_TIMEOUT_SECONDS", 10)        # SSH command t
 RECONNECT_DELAYS = _env_int_list_csv("RECONNECT_DELAYS", [5, 10, 30, 60])  # Backoff (seconds)
 HA_DISCOVERY_PREFIX = _env_str("HA_DISCOVERY_PREFIX", "homeassistant")     # HA discovery prefix
 HA_ENTITY_BASE = _env_str("HA_ENTITY_BASE", "8311")              # Base name for MQTT topics/entities
-DEBUG_MODE = _env_bool("DEBUG_MODE", True)                       # Verbose logging
+DEBUG_MODE = _env_bool("DEBUG_MODE", False)                       # Verbose logging
 TEST_MODE = _env_bool("TEST_MODE", False)                        # Single test cycle instead of monitoring
 MQTT_CLIENT_ID = _env_str("MQTT_CLIENT_ID", "8311-ha-bridge")     # MQTT client id
-PING_ENABLED = _env_bool("PING_ENABLED", True)                   # Disable if ping/caps are a hassle in containers
+PING_ENABLED = _env_bool("PING_ENABLED", False)                   # Disable if ping/caps are a hassle in containers
 
 VERSION = _env_str("VERSION", "1.0.0")
 # ==============================================================================
