@@ -5,18 +5,28 @@ services:
     container_name: 8311-ha-bridge
     build: .
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - WAS_110_HOST=${WAS_110_HOST:-192.168.11.1}
-      - WAS_110_USER=${WAS_110_USER:-root}
-      - WAS_110_PORT=${WAS_110_PORT:-22}
-      - HA_MQTT_BROKER=${HA_MQTT_BROKER:-homeassistant.local}
-      - HA_MQTT_PORT=${HA_MQTT_PORT:-1883}
-      - HA_MQTT_USER=${HA_MQTT_USER:-8311-ha-bridge}
+      - WAS_110_HOST=${WAS_110_HOST}
+      - WAS_110_USER=${WAS_110_USER}
+      - WAS_110_PASS=${WAS_110_PASS}
+      - WAS_110_PORT=${WAS_110_PORT}
+      - HA_MQTT_BROKER=${HA_MQTT_BROKER}
+      - HA_MQTT_PORT=${HA_MQTT_PORT}
+      - HA_MQTT_USER=${HA_MQTT_USER}
       - HA_MQTT_PASS=${HA_MQTT_PASS}
-      - POLL_INTERVAL_SECONDS=${POLL_INTERVAL_SECONDS:-60}
-      - SSH_TIMEOUT_SECONDS=${SSH_TIMEOUT_SECONDS:-10}
-      - DEBUG_MODE=${DEBUG_MODE:-False}
+      - POLL_INTERVAL_SECONDS=${POLL_INTERVAL_SECONDS}
+      - SSH_TIMEOUT_SECONDS=${SSH_TIMEOUT_SECONDS}
+      - RECONNECT_DELAYS=${RECONNECT_DELAYS}
+      - HA_DISCOVERY_PREFIX=${HA_DISCOVERY_PREFIX}
+      - HA_ENTITY_BASE=${HA_ENTITY_BASE}
+      - MQTT_CLIENT_ID=${MQTT_CLIENT_ID}
+      - DEBUG_MODE=${DEBUG_MODE}
+      - TEST_MODE=${TEST_MODE}
+      - PING_ENABLED=${PING_ENABLED}
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      # Uncomment below to mount SSH keys if needed
-      # - ./ssh_keys:/root/.ssh:ro
+    # If you keep PING_ENABLED=true and your platform requires it, uncomment:
+    # cap_add:
+    #   - NET_RAW
