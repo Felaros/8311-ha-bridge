@@ -872,7 +872,7 @@ def monitor_was_110():
                     "version": VERSION
                 })
 
-                print(f"✓ Update #{stats['total_updates']}: RX={metrics.get('rx_power_dbm', 'N/A')}dBm, TX={metrics.get('tx_power_dbm', 'N/A')}dBm, Temp={metrics.get('optic_temp', 'N/A')}°C, Link={'UP' if metrics.get('pon_status', {}).get('link_up') else 'DOWN'}")
+                debug_log(f"✓ Update #{stats['total_updates']}: RX={metrics.get('rx_power_dbm', 'N/A')}dBm, TX={metrics.get('tx_power_dbm', 'N/A')}dBm, Temp={metrics.get('optic_temp', 'N/A')}°C, Link={'UP' if metrics.get('pon_status', {}).get('link_up') else 'DOWN'}")
 
             else:
                 print("⚠ Failed to collect metrics")
