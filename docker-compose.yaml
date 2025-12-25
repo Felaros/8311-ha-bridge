@@ -5,8 +5,8 @@ services:
     container_name: 8311-ha-bridge
     build: .
     restart: unless-stopped
-    env_file:
-      - .env
+    #env_file:
+    #  - .env
     environment:
       - WAS_110_HOST=${WAS_110_HOST}
       - WAS_110_USER=${WAS_110_USER}
