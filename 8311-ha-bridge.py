@@ -27,28 +27,55 @@ from collections import defaultdict
 # ==============================================================================
 print("--- Loading Configuration ---")
 
+# Environment overrides: set these in Docker/Portainer/compose.
+import os
+
+def _env_str(name: str, default: str | None = None) -> str | None:
+    v = os.getenv(name)
+    return v if v is not None and v != "" else default
+
+def _env_int(name: str, default: int) -> int:
+    v = os.getenv(name)
+    if v is None or v == "":
+        return default
+    return int(v)
+
+def _env_bool(name: str, default: bool) -> bool:
+    v = os.getenv(name)
+    if v is None or v == "":
+        return default
+    return v.strip().lower() in ("1", "true", "yes", "on", "y")
+
+def _env_int_list_csv(name: str, default: list[int]) -> list[int]:
+    v = os.getenv(name)
+    if v is None or v.strip() == "":
+        return default
+    return [int(x.strip()) for x in v.split(",") if x.strip()]
+
 # --- WAS-110 Device Settings ---
-WAS_110_HOST = "192.168.11.1"       # <-- CHANGE THIS to your WAS-110 IP
-WAS_110_USER = "root"               # SSH username
-WAS_110_PASS = ""                   # SSH password (empty or "Aa123456")
-WAS_110_PORT = 22                   # SSH port
+WAS_110_HOST = _env_str("WAS_110_HOST", "192.168.11.1")          # WAS-110 IP/hostname
+WAS_110_USER = _env_str("WAS_110_USER", "root")                  # SSH username
+WAS_110_PASS = _env_str("WAS_110_PASS", "")                      # (unused unless you implement password auth)
+WAS_110_PORT = _env_int("WAS_110_PORT", 22)                      # SSH port
 
 # --- Home Assistant MQTT Broker Configuration ---
-HA_MQTT_BROKER = "homeassistant.local"    # <-- CHANGE THIS to your MQTT broker IP or hostname
-HA_MQTT_PORT = 1883                 # MQTT port
-HA_MQTT_USER = "8311-ha-bridge"                 # MQTT username (or None)
-HA_MQTT_PASS = None                 # MQTT password (or None) - SET THIS for your broker
+HA_MQTT_BROKER = _env_str("HA_MQTT_BROKER", "homeassistant.local")      # MQTT broker IP/hostname
+HA_MQTT_PORT = _env_int("HA_MQTT_PORT", 1883)                   # MQTT port
+HA_MQTT_USER = _env_str("HA_MQTT_USER", "8311-ha-bridge")        # MQTT username (or None)
+HA_MQTT_PASS = _env_str("HA_MQTT_PASS", None)                    # MQTT password (or None)
 
 # --- Script Operation Settings ---
-POLL_INTERVAL_SECONDS = 60          # How often to query WAS-110
-SSH_TIMEOUT_SECONDS = 10            # SSH command timeout
-RECONNECT_DELAYS = [5, 10, 30, 60]  # Exponential backoff (seconds)
-HA_DISCOVERY_PREFIX = "homeassistant"
-HA_ENTITY_BASE = "8311"
-DEBUG_MODE = True                  # Set to True for verbose logging
-TEST_MODE = False                    # Set to True to run a single test cycle instead of monitoring
-VERSION = "1.0.0"
+POLL_INTERVAL_SECONDS = _env_int("POLL_INTERVAL_SECONDS", 60)    # How often to query WAS-110
+SSH_TIMEOUT_SECONDS = _env_int("SSH_TIMEOUT_SECONDS", 10)        # SSH command timeout
+RECONNECT_DELAYS = _env_int_list_csv("RECONNECT_DELAYS", [5, 10, 30, 60])  # Backoff (seconds)
+HA_DISCOVERY_PREFIX = _env_str("HA_DISCOVERY_PREFIX", "homeassistant")     # HA discovery prefix
+HA_ENTITY_BASE = _env_str("HA_ENTITY_BASE", "8311")              # Base name for MQTT topics/entities
+DEBUG_MODE = _env_bool("DEBUG_MODE", True)                       # Verbose logging
+TEST_MODE = _env_bool("TEST_MODE", False)                        # Single test cycle instead of monitoring
+MQTT_CLIENT_ID = _env_str("MQTT_CLIENT_ID", "8311-ha-bridge")     # MQTT client id
+PING_ENABLED = _env_bool("PING_ENABLED", True)                   # Disable if ping/caps are a hassle in containers
 
+VERSION = _env_str("VERSION", "1.0.0")
 # ==============================================================================
 # --- Global Variables ---
 # ==============================================================================
@@ -229,6 +256,9 @@ def check_host_reachable():
     This is useful because the device may respond to ping even when SSH is temporarily unresponsive.
     Returns True if host responds to ping, False otherwise.
     """
+    if not PING_ENABLED:
+        return True
+
     try:
         # Use -c 1 for single ping, -W timeout in seconds
         result = subprocess.run(
@@ -271,6 +301,7 @@ def execute_ssh_command(command):
     """
     ssh_command = [
         "ssh",
+        "-p", str(WAS_110_PORT),
         "-o", "StrictHostKeyChecking=no",
         "-o", "UserKnownHostsFile=/dev/null",
         "-o", "ConnectTimeout=" + str(SSH_TIMEOUT_SECONDS),
@@ -322,8 +353,8 @@ def connect_ssh():
     """
     print(f"Connecting to WAS-110 at {WAS_110_HOST}...")
 
-    # First check if host is reachable via ping
-    if not check_host_reachable():
+    # First check if host is reachable via ping (optional in containers)
+    if PING_ENABLED and not check_host_reachable():
         print(f"✗ Host {WAS_110_HOST} is not responding to ping")
         if not TEST_MODE:
             publish_binary_sensor_state("ssh_connection_status", False)
@@ -367,13 +398,13 @@ def connect_mqtt():
 
     ha_mqtt_client = mqtt.Client(
         callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
-        client_id="8311-ha-bridge"
+        client_id=MQTT_CLIENT_ID
     )
 
     ha_mqtt_client.on_connect = on_connect_ha
     ha_mqtt_client.on_disconnect = on_disconnect_ha
 
-    if HA_MQTT_USER and HA_MQTT_PASS:
+    if HA_MQTT_USER:
         ha_mqtt_client.username_pw_set(HA_MQTT_USER, HA_MQTT_PASS)
 
     try:
